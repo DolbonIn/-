@@ -3,848 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>기술적 고민 없는 프로덕션 Ready AI 에이전트 구축</title>
+    <title>금융 문서 Deep Research 분석기 (상세 흐름)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: #fcfcfc;
-            background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
-            background-size: 30px 30px;
         }
-        .slide {
-            display: none;
-            min-height: 85vh;
-            align-items: center;
-            justify-content: center;
+        .step-card, .sub-step-card {
+            transition: all 0.5s ease-in-out;
+            transform: translateY(20px);
             opacity: 0;
-            transition: opacity 0.5s ease-in-out;
         }
-        .slide.active {
-            display: flex;
+        .step-card.visible, .sub-step-card.visible {
+            transform: translateY(0);
             opacity: 1;
         }
-        .slide-container {
-            width: 100%;
-            max-width: 1100px;
-            padding: 60px 70px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
         }
-        .slide-part-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 8px;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .slide-title {
-            font-size: 3rem;
-            font-weight: 900;
-            color: #111;
-            margin-bottom: 25px;
-            line-height: 1.3;
-        }
-        .slide-subtitle {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: #444;
-            margin-bottom: 35px;
-        }
-        .slide-content {
-            font-size: 1.1rem;
-            line-height: 1.9;
-            color: #333;
-        }
-        .highlight {
-            background: linear-gradient(to top, #ffd900 50%, transparent 50%);
-            padding: 0 0.1em;
-        }
-        .btn {
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-weight: 700;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            border: none;
-        }
-        .btn-primary {
-            background-color: #111;
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: #333;
-        }
-        .btn-secondary {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        .btn-secondary:hover {
-            background-color: #e0e0e0;
-        }
-        .progress-bar-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px 40px;
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
-            border-top: 1px solid #eee;
-            z-index: 10;
-        }
-        .progress-bar {
-            width: 100%;
-            background-color: #eee;
-            border-radius: 9999px;
-            height: 8px;
-            margin-bottom: 15px;
-        }
-        .progress {
-            background-color: #111;
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.3s ease;
-        }
-        .interactive-box {
-            border: 1px solid #ddd;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .interactive-box:hover {
-            border-color: #111;
-            background-color: #f9f9f9;
-        }
-        .hidden-content {
-            display: none;
-            margin-top: 15px;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            border: 1px solid #e0e0e0;
-        }
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #eee;
-            padding: 14px;
-            text-align: left;
-        }
-        th {
-            background-color: #f9f9f9;
-            font-weight: 700;
-        }
-        .workflow-diagram {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 2.5rem;
-            flex-wrap: wrap;
-        }
-        .workflow-step {
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            min-width: 130px;
-        }
-        .workflow-step .icon {
-            font-size: 2.2rem;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        .workflow-arrow {
-            font-size: 1.8rem;
-            color: #ccc;
-        }
-        .image-placeholder {
-            background-color: #e0e0e0;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9e9e9e;
-            font-weight: bold;
-            width: 100%;
-            height: 300px;
-            margin-top: 20px;
+        .code-block {
+            white-space: pre-wrap;
+            word-break: break-all;
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4 md:p-8 pb-32">
+<body class="bg-gray-50 text-gray-800">
 
-    <div class="w-full">
-        <!-- Slides Container -->
-        <div id="slides-container">
-            <!-- Slide 1: Title -->
-            <div class="slide active">
-                <div class="slide-container text-center">
-                    <div class="text-7xl mb-8">🤖</div>
-                    <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-4">기술적 고민 없는<br>프로덕션 Ready AI 에이전트 구축</h1>
-                    <p class="text-xl md:text-2xl text-gray-700">Sionic AI와 함께, <span class="highlight">5점짜리 프로토타입을 100점짜리 시스템으로</span></p>
-                </div>
-            </div>
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <!-- 헤더 -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">금융 문서 Deep Research 분석기</h1>
+            <p class="text-gray-600 mt-2">AI 워크플로의 재귀적 분석 및 변수 업데이트 과정을 시뮬레이션합니다.</p>
+        </header>
 
-            <!-- Slide 2: 목차 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">목차</h2>
-                    <div class="slide-content">
-                        <ol class="list-decimal list-inside space-y-3 text-lg">
-                            <li><b>Part 1: 현실의 벽</b> - AI 에이전트의 가능성과 기업이 마주한 현실적 어려움</li>
-                            <li><b>Part 2: 기술적 해법</b> - Sionic AI가 제안하는 데이터, RAG, 보안 문제 해결책</li>
-                            <li><b>Part 3: 인지 아키텍처</b> - 5점에서 100점으로, 에이전트의 '사고' 방식 설계</li>
-                            <li><b>Part 4: 에이전틱 스캐폴딩</b> - 프레임워크, 계획, 메모리로 만드는 견고한 구조</li>
-                            <li><b>Part 5: 성능 극대화</b> - 자율 개선과 피드백으로 완성하는 프로덕션 시스템</li>
-                            <li><b>Part 6: 도입 사례 및 Q&A</b></li>
-                        </ol>
-                    </div>
-                </div>
+        <!-- 분석 시작 섹션 -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-2 text-blue-700">분석 대상 문서</h2>
+            <p class="font-mono bg-gray-100 p-2 rounded-md text-sm text-gray-700">KR5227367145_미래에셋개인전용MMF1호(국공채)_투자설명서.pdf</p>
+            <h2 class="text-xl font-semibold mt-4 mb-2 text-blue-700">사용자 질문</h2>
+            <p class="text-lg">"초보 투자자가 '미래에셋 개인전용 MMF 1호'에 투자하기 전에 반드시 알아야 할 핵심 정보와 유의사항은 무엇인가요?"</p>
+            <div class="text-center mt-6">
+                <button id="startButton" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-lg">
+                    상세 분석 시작하기
+                </button>
             </div>
-
-            <!-- Part 1: 현실의 벽 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 1: 현실의 벽</p>
-                    <h2 class="slide-title">AI 에이전트, <span class="highlight">가능성과 현실의 괴리</span></h2>
-                    <p class="slide-content">범용 AI 에이전트는 데이터 분석, 의사결정, 실행까지 수행하며 엄청난 가능성을 보여주었습니다. 하지만 기업이 이를 도입하는 과정은 결코 순탄치 않습니다.</p>
-                </div>
-            </div>
-
-            <!-- Slide 4: 범용 AI Agent의 시대 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">범용 AI Agent의 시대</h2>
-                    <p class="slide-subtitle">데이터 분석, 의사결정, 실행까지 수행하는 범용 AI Agent의 등장</p>
-                    <div class="slide-content">
-                        <p>AI 에이전트 'manus'는 "Amazon Store 판매 분석 및 전략" 요청에 따라, 복잡한 데이터 분석을 자율적으로 수행하고 보고서와 시각화 자료까지 생성하며 AI의 엄청난 잠재력을 보여주었습니다.</p>
-                        <div class="image-placeholder"></div>
-                        <p class="text-sm mt-2 text-center text-gray-500">주요 분석 결과: 화요일 최고 실적, 주말 주문 가치 하락, 최적 할인율 발견 등</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 5: 현실과의 괴리 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">그러나 현실과의 괴리는...</h2>
-                    <p class="slide-subtitle">완전 자율형 Agent의 실패 사례가 속속 등장하고 있습니다.</p>
-                    <div class="slide-content">
-                        <p>AI 코드 에디터 'Cursor'가 간단한 UI 수정 요청에 4개월간의 작업을 망가뜨렸다는 사례처럼, 완전한 자율성은 아직 신뢰하기 어렵습니다. 작은 실수가 큰 재앙으로 이어질 수 있습니다.</p>
-                        <div class="mt-8 p-6 bg-red-50 border border-red-200 rounded-lg">
-                            <h3 class="font-bold text-lg">🚨 The Problem: 5-Point AI</h3>
-                            <p class="mt-2">최신 LLM인 Gemini 2.5 Pro도 단순 프롬프트 방식으로는 한국 정보 올림피아드(KOI) 문제에서 5점을 획득하는 데 그쳤습니다. 이는 LLM이 표면적 이해, 불완전한 추론 등 구조적 한계를 가짐을 보여줍니다. 이것이 우리의 출발점입니다.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 6: 엔터프라이즈의 어려움 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">엔터프라이즈 도입의 <span class="highlight">핵심 어려움</span></h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">🛡️ 자율성 vs 안전성</h3>
-                            <p>강력한 AI는 통제하기 어렵습니다. 1%의 실수가 기업에게 100%의 책임을 지울 수 있습니다. AI의 설명 불가능성(Black Box)은 리스크 관리를 어렵게 만듭니다.</p>
-                        </div>
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">📚 데이터 부채</h3>
-                            <p>기업 데이터는 PDF, 이미지, 표 등 복잡한 형태로 흩어져 있습니다. 단순 정리가 아닌, 'AI 학습에 최적화된' 데이터 정제 및 분류가 필요합니다.</p>
-                        </div>
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">⚖️ 규모의 저주와 보안</h3>
-                            <p>데이터 양이 커질수록 검색 정확도는 떨어집니다. 동시에 AI 학습을 위한 데이터 활용과 민감정보 보호 사이의 균형을 맞춰야 하는 딜레마에 빠집니다.</p>
-                        </div>
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">⏳ 지식의 반감기</h3>
-                            <p>AI 기술은 2주마다 발전하지만, 기업이 이를 검증하고 적용하는 데는 9-15개월이 걸립니다. 이 속도의 차이가 기술 도입을 더욱 어렵게 만듭니다.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Part 2: 기술적 해법 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 2: 기술적 해법</p>
-                    <h2 class="slide-title">Sionic AI의 <span class="highlight">Bridging Platform</span></h2>
-                    <p class="slide-content">이러한 복잡한 문제들을 어떻게 해결할 수 있을까요? Sionic AI는 기술과 비즈니스 현장을 잇는 다리, 'Bridging Platform'을 통해 현실적인 해법을 제시합니다.</p>
-                </div>
-            </div>
-
-            <!-- Slide 8: Bridging Platform 아키텍처 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">AX 지원에 최적화된 Bridging Platform</h2>
-                    <p class="slide-subtitle">AI 에이전트 구축에 필요한 모든 도구와 기술을 하나의 통합 플랫폼으로 제공</p>
-                    <div class="image-placeholder"></div>
-                    <p class="text-sm mt-2 text-center text-gray-500">Application, Sionic AI STORM Platform, LLM 선택의 3계층 구조</p>
-                </div>
-            </div>
-            
-            <!-- Slide 9: Bridging Platform 워크플로우 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">End-to-End AI 도입 워크플로우</h2>
-                    <p class="slide-subtitle">학습부터 운영, 개선까지 기업용 생성형 AI 도입의 전 과정을 지원합니다.</p>
-                    <div class="workflow-diagram text-xs md:text-sm">
-                        <div class="workflow-step"><div class="icon">📄</div><b>1. 문서 업로드</b></div>
-                        <div class="workflow-arrow">→</div>
-                        <div class="workflow-step"><div class="icon">🧠</div><b>2. LLM 선택</b></div>
-                        <div class="workflow-arrow">→</div>
-                        <div class="workflow-step"><div class="icon">✍️</div><b>3. 프롬프팅</b></div>
-                        <div class="workflow-arrow">→</div>
-                        <div class="workflow-step"><div class="icon">🧪</div><b>4. 테스트</b></div>
-                        <div class="workflow-arrow">→</div>
-                        <div class="workflow-step"><div class="icon">🚀</div><b>5. 배포</b></div>
-                        <div class="workflow-arrow">🔄</div>
-                        <div class="workflow-step"><div class="icon">📈</div><b>8. 피드백/개선</b></div>
-                        <div class="workflow-arrow">←</div>
-                        <div class="workflow-step"><div class="icon">📊</div><b>7. 로그 검토</b></div>
-                        <div class="workflow-arrow">←</div>
-                        <div class="workflow-step"><div class="icon">🔗</div><b>6. 서비스 연동</b></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 10: 데이터 디지털 전환 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">고유 데이터의 디지털 전환</h2>
-                    <p class="slide-subtitle">이미지, 표, 그래프가 혼재된 비정형 데이터도 LLM 학습에 최적화된 형태로 자동 변환</p>
-                    <div class="flex gap-4 mt-4">
-                        <div class="w-1/2 p-4 border rounded-lg">
-                            <h3 class="font-bold text-center">원본 문서 (사업보고서)</h3>
-                            <div class="image-placeholder"></div>
-                        </div>
-                        <div class="w-1/2 p-4 border rounded-lg bg-gray-50">
-                            <h3 class="font-bold text-center">변환 결과 (텍스트)</h3>
-                            <div class="text-sm p-2 bg-white rounded h-full">
-                                <p>"Global recorded music industry revenues 1999 - 2023 (US$ billions) 차트가 있습니다. 차트는 총 5가지 항목으로 구성되어 있습니다..."</p>
-                                <p class="mt-2">"1999년부터 2023년까지의 'Total Physical'의 매출은 다음과 같습니다: 1999년 22.2, 2000년 20.9..."</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 11: 데이터 품질 관리 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">데이터 품질 및 보안 관리</h2>
-                    <p class="slide-subtitle">민감정보 또는 유해어를 정규식 패턴으로 등록하고, 학습 데이터 내에서 감지 시 처리 방식을 선택하여 보안을 강화합니다.</p>
-                    <div class="image-placeholder"></div>
-                     <p class="text-sm mt-2 text-center text-gray-500">직원 연봉, 고객 주민번호 등 민감정보를 학습에서 자동 제외하거나 마스킹 처리</p>
-                </div>
-            </div>
-            
-            <!-- Slide 12: RAG 기본 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">기본 RAG: <span class="highlight">검색 증강 생성</span></h2>
-                    <p class="slide-subtitle">LLM의 한계를 외부 지식으로 보완하는 핵심 기술</p>
-                    <div class="slide-content">
-                        <p>RAG는 사용자의 질문에 대해 관련된 정보를 외부 데이터 소스(문서, DB 등)에서 검색한 후, 이 정보를 LLM에게 함께 제공하여 답변의 정확성과 신뢰도를 높이는 기술입니다. 핵심 원리는 "주어진 정보 안에서 최적의 답변을 만들어 줘"라고 지시하는 것과 같습니다.</p>
-                        <div class="image-placeholder"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 13: 대규모 RAG의 딜레마 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">대규모 RAG 시스템의 딜레마</h2>
-                    <p class="slide-subtitle">데이터가 많아질수록 발생하는 문제들</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">규모의 저주</h3>
-                            <p>데이터 양이 10권에서 100만권으로 늘어나면, 원하는 정보를 정확히 찾는 것은 훨씬 어려워집니다. 검색 정확도가 급격히 하락합니다.</p>
-                        </div>
-                        <div class="p-6 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-xl mb-2">차원의 저주</h3>
-                            <p>정보를 더 잘 표현하기 위해 벡터의 차원을 높이면(e.g., 1024 -> 4096), 검색 속도와 인프라 비용이 4배가 아닌 100~1000배로 증가할 수 있습니다. HNSW 같은 검색 알고리즘의 성능이 급격히 저하되기 때문입니다.</p>
-                        </div>
-                    </div>
-                    <p class="mt-8 text-center font-bold text-lg">결국, <span class="highlight">표현력 증가</span>와 <span class="highlight">검색 성능 저하</span>라는 상충 관계를 해결해야 합니다.</p>
-                </div>
-            </div>
-
-            <!-- Slide 14: RAG 2.0: Agentic RAG -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">RAG 2.0: <span class="highlight">Agentic RAG</span></h2>
-                    <p class="slide-subtitle">단순 검색을 넘어, LLM이 추론하고 탐색하는 복합 시스템</p>
-                    <div class="slide-content">
-                        <p>현대의 RAG 시스템은 LLM이 'Retrieval Agent'가 되어, 여러 벡터 저장소, 웹 검색, 계산기 등 다양한 도구를 활용하여 다중 추론 과정을 거칩니다. 이는 단순히 가장 유사한 정보를 찾는 것을 넘어, 여러 정보를 종합하고 분석하여 최적의 답변을 생성하는 방식입니다.</p>
-                        <div class="image-placeholder"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 15: RAG 2.0: Recommender System -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Sionic의 RAG: <span class="highlight">추천 시스템</span></h2>
-                    <p class="slide-subtitle">고객이 체감하는 실제 정보(chunk)의 순위(rank)를 최적화합니다.</p>
-                    <div class="slide-content">
-                        <p>Sionic의 RAG는 Siamese Neural Network와 같은 모델을 활용하여, 단순히 키워드나 의미적 유사성을 넘어 사용자의 의도에 가장 부합하는 정보의 순위를 매기는 추천 시스템처럼 작동합니다. 이는 검색 결과의 질을 극대화합니다.</p>
-                        <div class="image-placeholder"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 16: RAG 2.0: Long CLS Chunking -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">광대역 임베딩: <span class="highlight">Long CLS Chunking</span></h2>
-                    <p class="slide-subtitle">문서의 맥락을 보존하여 검색 성능을 극대화</p>
-                    <div class="slide-content">
-                        <p>기존의 고정 크기 청킹 방식은 표나 문단 중간에서 잘려 맥락이 사라지는 문제가 있었습니다. Sionic의 Long CLS Chunking 기술은 Transformer 모델을 활용하여 긴 컨텍스트를 효과적으로 처리하고, 문서의 의미적 맥락을 보존합니다.</p>
-                        <table class="text-base">
-                            <thead>
-                                <tr><th>Chunking 방식</th><th>NDCG@10</th><th>MAP@10</th><th>Recall@10</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>Baseline (512 size)</td><td>0.2531</td><td>0.2147</td><td>-</td></tr>
-                                <tr><td>Large Chunk (8,192 size)</td><td>0.6380</td><td>0.5633</td><td>-</td></tr>
-                                <tr><td class="font-bold">Long CLS Chunking (Sionic)</td><td class="font-bold text-blue-600">0.6808</td><td class="font-bold text-blue-600">0.6038</td><td class="font-bold text-blue-600">0.9182</td></tr>
-                            </tbody>
-                        </table>
-                        <p class="mt-4 text-center">Sionic의 방식이 모든 평가지표에서 월등한 성능을 보입니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 17: Advanced RAG Pipeline -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Advanced RAG 2.0 파이프라인</h2>
-                    <p class="slide-subtitle">다단계 탐색 전략으로 검색 정확도 향상</p>
-                    <div class="slide-content">
-                        <p>Sionic의 RAG는 단순히 한 번 검색하고 끝나는 것이 아니라, 체계적인 다단계 파이프라인을 통해 가장 관련성 높은 정보를 찾아냅니다.</p>
-                        <ol class="list-decimal list-inside space-y-2 mt-4">
-                            <li><b>피드백 우선 탐색:</b> 사용자가 제공한 피드백(모범답변)을 가장 먼저 확인합니다.</li>
-                            <li><b>우선 폴더 탐색:</b> 관리자가 지정한 중요 문서 폴더를 우선 탐색합니다.</li>
-                            <li><b>관련 문서/폴더 탐색:</b> 질문과 유사한 문서/폴더를 선택하여 집중 탐색합니다.</li>
-                            <li><b>다양성 탐색:</b> 검색 결과의 다양성을 확보하기 위해 탐색되지 않은 문서를 추가로 탐색합니다.</li>
-                            <li><b>쿼리 확장(Query Expansion):</b> LLM을 통해 원본 질문을 다양한 형태로 변형하여 검색 범위를 넓힙니다.</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Part 3: 인지 아키텍처 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 3: 인지 아키텍처</p>
-                    <h2 class="slide-title">5점에서 100점으로: <span class="highlight">에이전트의 '사고' 방식 설계</span></h2>
-                    <p class="slide-content">뛰어난 에이전트는 단순히 좋은 모델을 쓰는 것을 넘어, 어떻게 '생각'하고 문제를 해결할지 그 '프로세스'를 설계하는 데서 탄생합니다.</p>
-                </div>
-            </div>
-
-            <!-- Slide 19: 추론 아키텍처 진화 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">추론 아키텍처의 진화</h2>
-                    <p class="slide-subtitle">"혼자 생각하기"에서 "모든 가능성 탐색하기"로</p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                        <div class="p-4 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-lg">⛓️ CoT (Chain-of-Thought)</h3>
-                            <p>내부 지식만으로 단계별 추론. 외부 세계와 단절되어 환각(Hallucination)에 취약.</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-lg">🛠️ ReAct (Reason + Act)</h3>
-                            <p>추론과 행동을 결합. 외부 도구(검색 등)를 사용해 사실에 기반한 추론을 수행.</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold text-lg">🌳 ToT/GoT (Tree/Graph of Thoughts)</h3>
-                            <p>여러 해결 경로를 동시에 탐색하고, 막다른 길에서 되돌아오거나 아이디어를 합치는 비선형적 사고.</p>
-                        </div>
-                    </div>
-                    <p class="mt-8 text-center font-bold">이러한 진화는 더 어려운 문제에 더 많은 계산 자원을 투입하여 <span class="highlight">"더 깊이 생각할" 시간</span>을 주는 전략입니다.</p>
-                </div>
-            </div>
-
-            <!-- Part 4: 에이전틱 스캐폴딩 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 4: 에이전틱 스캐폴딩</p>
-                    <h2 class="slide-title">견고한 구조 만들기: <span class="highlight">프레임워크, 계획, 메모리</span></h2>
-                    <p class="slide-content">추상적인 추론을 넘어, 에이전트를 실제로 구축하고 관리하는 데 필요한 실질적인 소프트웨어 엔지니어링 구조를 다룹니다.</p>
-                </div>
-            </div>
-            
-            <!-- Slide 21: KOI Case Study -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Case Study: KOI 문제 해결 워크플로우</h2>
-                    <p class="slide-subtitle">5단계 파이프라인으로 <span class="highlight">5점에서 27점으로</span></p>
-                    <div class="slide-content">
-                        <p>단순 요청이 아닌, 명확한 역할을 가진 5개의 가상 에이전트가 협력하는 파이프라인을 구축했습니다. 이는 다중 에이전트 시스템의 효과를 명확히 보여줍니다.</p>
-                        <div class="workflow-diagram text-xs md:text-sm">
-                            <div class="workflow-step"><div class="icon">✍️</div><b>1. 초기 해결</b></div>
-                            <div class="workflow-arrow">→</div>
-                            <div class="workflow-step"><div class="icon">✨</div><b>2. 자가 개선</b></div>
-                            <div class="workflow-arrow">→</div>
-                            <div class="workflow-step"><div class="icon">🔍</div><b>3. 코드 검증</b></div>
-                            <div class="workflow-arrow">→</div>
-                            <div class="workflow-step"><div class="icon">📊</div><b>4. 보고서 분석</b></div>
-                            <div class="workflow-arrow">→</div>
-                            <div class="workflow-step"><div class="icon">🔧</div><b>5. 코드 수정</b></div>
-                        </div>
-                        <p class="mt-8 text-center font-bold">이 구조화된 접근만으로 성능이 5배 이상 향상되었습니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 22: 오케스트레이션 프레임워크 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">오케스트레이션 프레임워크</h2>
-                    <p class="slide-subtitle">수동 작업을 자동화하기: AutoGen, LangGraph, CrewAI</p>
-                    <div class="slide-content">
-                        <p>이러한 다단계 워크플로우를 자동화하고 정교하게 제어하기 위해 다양한 프레임워크를 사용할 수 있습니다.</p>
-                         <table class="text-base">
-                            <thead>
-                                <tr><th>프레임워크</th><th>추상화 수준</th><th>핵심 패러다임</th><th>최적 사용 사례</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>📈 LangGraph</td><td>저수준</td><td>상태 기계 그래프</td><td>복잡/장기 실행 앱, 완전한 제어 필요시</td></tr>
-                                <tr><td>💬 AutoGen</td><td>중수준</td><td>다중 에이전트 대화</td><td>협력 에이전트 신속 프로토타이핑</td></tr>
-                                <tr><td>👨‍🚀 CrewAI</td><td>고수준</td><td>역할 기반 크루</td><td>역할 분해가 가능한 워크플로우</td></tr>
-                            </tbody>
-                        </table>
-                        <p class="mt-4 font-bold">"100점짜리" 프로덕션 시스템을 위해서는 <span class="highlight">LangGraph</span>와 같이 제어권이 높은 저수준 프레임워크가 필수적입니다.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Slide 23: 에이전트 워크플로우 도구 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Sionic의 에이전트 워크플로우 도구</h2>
-                    <p class="slide-subtitle">관리자 인터페이스를 통해 AI 에이전트의 <span class="highlight">작업 흐름과 권한 범위를 직접 설계하고 제어</span>할 수 있습니다.</p>
-                    <div class="slide-content">
-                        <p>Sionic 플랫폼은 LangGraph와 같은 프레임워크의 개념을 시각적인 UI로 구현했습니다. 개발자가 아닌 현업 담당자도 드래그앤드롭 방식으로 노드를 연결하여 RAG, 조건 분기(IF/ELSE) 등이 포함된 복잡한 에이전트 워크플로우를 쉽게 설계하고 관리할 수 있습니다.</p>
-                        <div class="image-placeholder"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 24: 컨텍스트 오염 문제 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Problem: <span class="highlight">Context Contamination</span></h2>
-                    <p class="slide-subtitle">반복적 개선의 주요 장애물, 컨텍스트 오염</p>
-                    <div class="slide-content">
-                        <p>KOI 사례 연구자는 반복 과정에서 성능이 오히려 저하되는 현상을 경험했습니다. 이는 LLM이 여러 턴의 대화에서 맥락을 잃어버리는 문제 때문입니다. 한번 오염된 컨텍스트는 정화하기 매우 어렵습니다.</p>
-                        <div class="mt-8 p-6 bg-red-50 border border-red-200 rounded-lg">
-                            <h3 class="font-bold text-lg">🚨 컨텍스트 오염의 위험</h3>
-                            <p>초기 단계의 잘못된 가정이나 불필요한 정보가 누적되어, 후반부 추론의 질을 저하시킵니다. <span class="highlight">컨텍스트는 양보다 질입니다.</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 25: 컨텍스트 관리 해결책 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Solution: <span class="highlight">The Kick & Context Engineering</span></h2>
-                    <p class="slide-subtitle">27점에서 100점으로 이끈 결정적 방법론</p>
-                    <div class="slide-content">
-                        <p>해결책은 멀티턴 대화를 버리고, <b>모든 맥락을 하나의 거대한 싱글턴 프롬프트로 통합</b>하여 '완벽한 컨텍스트'를 제공하는 것이었습니다. 각 단계에서 LLM에 전달되는 컨텍스트 그 자체가 에이전트의 행동을 결정하는 '코드' 역할을 합니다.</p>
-                        <div class="mt-6 p-6 bg-green-50 border border-green-200 rounded-lg">
-                            <h3 class="font-bold text-lg">🔑 100점의 비밀: 정제된 컨텍스트와 명확한 피드백</h3>
-                            <p>에이전트의 사고 과정, 코드, 검증 보고서, 그리고 가장 중요한 <span class="highlight">"부분문제 3, 6, 7에서 시간 초과"</span>와 같은 구체적인 테스트 결과 피드백을 하나의 컨텍스트로 제공하는 것이 성능 향상의 열쇠였습니다.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Part 5: 성능 극대화 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 5: 성능 극대화</p>
-                    <h2 class="slide-title">자율 개선과 피드백으로 완성하는 <span class="highlight">프로덕션 시스템</span></h2>
-                    <p class="slide-content">에이전트가 단순히 작업을 실행하는 것을 넘어, 자신의 결과물과 프로세스를 능동적으로 개선하는 가장 진보된 기술을 다룹니다.</p>
-                </div>
-            </div>
-            
-            <!-- Slide 27: 피드백 스티어링 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">피드백 스티어링 (Feedback Steering)</h2>
-                    <p class="slide-subtitle">자연어 피드백으로 모델을 미세 조정</p>
-                    <div class="slide-content">
-                        <p>Sionic의 피드백 스티어링 기술은 사용자의 자연어 피드백을 통해 모델을 재학습(Fine-tuning)하지 않고도 실시간으로 답변의 방향을 미세 조정합니다. 예를 들어, "야호"라는 질문에 AI가 답변을 못했을 때, "신나요!"라는 모범답변을 피드백으로 주면, 다음부터는 "야호"와 "신나요!"의 벡터 유사도가 높아져 더 나은 답변을 생성하게 됩니다.</p>
-                        <div class="image-placeholder"></div>
-                        <p class="text-sm mt-2 text-center text-gray-500">이 기술은 Sionic AI가 보유한 특허(부스팅/억제 키워드 셋을 이용한 자연어 처리)에 기반합니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 28: 피드백 관리 UI -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">에이전트 빌더 – 피드백 관리</h2>
-                    <p class="slide-subtitle">테스트와 피드백을 통해 에이전트의 성능을 지속적으로 고도화</p>
-                    <div class="slide-content">
-                        <p>관리자는 테스트 과정에서 AI 답변의 출처를 직접 확인하고, '잘했어요/아쉬워요' 버튼과 모범답변 입력을 통해 피드백을 축적할 수 있습니다. 이 데이터는 앞서 설명한 피드백 스티어링 기술에 활용되어 에이전트의 성능을 지속적으로 개선합니다.</p>
-                        <div class="image-placeholder"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 29: Self-Healing Agents -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Self-Healing Agents</h2>
-                    <p class="slide-subtitle">컴파일러와 런타임 피드백의 자동화</p>
-                    <div class="slide-content">
-                        <p>TDD를 넘어, 컴파일 오류, 린터 경고, 런타임 예외 등 모든 기계 생성 피드백을 자동으로 캡처하여 에이전트에게 전달하는 워크플로우입니다. 이는 에이전트의 작업을 "버그를 찾아라"에서 "42번 줄의 TypeError를 수정하라"로 구체화하여 <span class="highlight">탐색 공간을 획기적으로 줄입니다.</span></p>
-                        <div class="mt-6 p-4 bg-gray-100 rounded-lg">
-                            <p>인간: "코드가 틀렸어." (모호함)</p>
-                            <p class="mt-2"><b>기계: <span class="text-red-600">"TypeError on line 42"</span></b> (명확하고 실행 가능한 피드백)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 30: Meta-Agents -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Meta-Agents: <span class="highlight">Recursive Self-Improvement</span></h2>
-                    <p class="slide-subtitle">자신의 프로세스까지 개선하는 에이전트</p>
-                    <div class="slide-content">
-                        <p><b>핵심 아이디어:</b> 인간이 에이전트의 워크플로우를 직접 작성하는 대신, 상위 목표만 정의하고 메타 에이전트가 이를 최적의 워크플로우로 '컴파일'합니다.</p>
-                        <ul class="list-disc list-inside mt-6 space-y-2">
-                            <li><b>STOP (Self-Taught Optimizer):</b> LM이 자기 자신의 '개선기' 코드를 더 나은 버전으로 만들도록 요청합니다.</li>
-                            <li><b>ADAS (Automated Design of Agentic Systems):</b> 메타 에이전트가 새로운 에이전트를 프로그래밍, 테스트하고 성공적인 설계를 아카이빙합니다.</li>
-                        </ul>
-                        <p class="mt-6 font-bold">궁극적인 목표: KOI 사례에서 수동으로 발견한 성공적인 워크플로우 자체를 자동화하는 것입니다.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Part 6: 도입 사례 및 Q&A -->
-            <div class="slide">
-                <div class="slide-container">
-                    <p class="slide-part-title">Part 6: 도입 사례 및 Q&A</p>
-                    <h2 class="slide-title">Sionic AI <span class="highlight">도입 사례</span></h2>
-                    <p class="slide-content">이론을 넘어, 실제 비즈니스 현장에서 어떻게 가치를 창출하고 있는지 살펴봅니다.</p>
-                </div>
-            </div>
-
-            <!-- Slide 32: 사용 사례 – 국책은행/투자증권 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">사용 사례 – 금융권</h2>
-                    <p class="slide-subtitle">국책은행 / 투자증권</p>
-                    <div class="slide-content">
-                        <ul class="list-disc list-inside space-y-4">
-                            <li><b>도전 과제:</b> 방대한 양의 업무 매뉴얼, 규정, 시행령 데이터와 매일 쏟아지는 시장 데이터(환율 등)를 신속하게 분석하고 활용해야 하는 어려움.</li>
-                            <li><b>Sionic 솔루션:</b>
-                                <ul class="list-disc list-inside ml-6 mt-2">
-                                    <li>고성능 RAG 파이프라인을 적용하여 복잡한 금융 문서(PDF, HWP)를 정확하게 검색하고 질의응답 수행.</li>
-                                    <li>에이전트를 활용하여 환율 변동 요약 및 외환 시장 보고서 초안을 자동으로 생성.</li>
-                                </ul>
-                            </li>
-                            <li><b>기대 효과:</b> 내부 직원의 정보 검색 시간 단축, 보고서 작성 업무 부담 경감, 시장 변화에 대한 신속한 대응 능력 강화.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Slide 33: 사용 사례 – 언론사 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">사용 사례 – 언론사</h2>
-                    <p class="slide-subtitle">M 언론사 기사 초안 작성 서비스 구축</p>
-                    <div class="slide-content">
-                        <ul class="list-disc list-inside space-y-4">
-                            <li><b>도전 과제:</b> 기자 메모, 외신, 재무제표, 녹취 등 다양한 형태의 보도자료를 기반으로 정해진 규칙에 맞춰 기사 초안을 작성하는 반복적인 업무.</li>
-                            <li><b>Sionic 솔루션:</b>
-                                <ul class="list-disc list-inside ml-6 mt-2">
-                                    <li>다양한 자료를 입력받아 '제목 생성 에이전트', '부제목 생성 에이전트', '본문 생성 에이전트'가 협력하여 기사 초안을 완성하는 다중 에이전트 시스템 구축.</li>
-                                </ul>
-                            </li>
-                            <li><b>기대 효과:</b> 기사 작성 시간 단축, 기자들이 심층 취재 및 분석에 더 많은 시간을 할애할 수 있도록 지원.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Slide 34: 사용 사례 – ESG 컨설팅사 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">사용 사례 – 컨설팅</h2>
-                    <p class="slide-subtitle">M 컨설팅사 ESG 보고서 초안 작성 서비스 구축</p>
-                    <div class="slide-content">
-                        <ul class="list-disc list-inside space-y-4">
-                            <li><b>도전 과제:</b> 보고서별/목차별로 상이한 작성 가이드와 모호한 항목들로 인해 컨설턴트의 수작업에 크게 의존.</li>
-                            <li><b>Sionic 솔루션:</b>
-                                <ul class="list-disc list-inside ml-6 mt-2">
-                                    <li>보고서 작성 가이드, 과거 보고서 등을 학습하여 목차별로 내용을 자동으로 생성하는 LLM 에이전트 구축.</li>
-                                </ul>
-                            </li>
-                            <li><b>기대 효과:</b> 보고서 초안 작성 자동화를 통해 컨설턴트의 업무 효율성 극대화, 보고서 품질의 일관성 확보.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 35: 현실적 함정 -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Common Agentic AI Traps</h2>
-                    <p class="slide-subtitle">"데모에서는 보여주지 않는 것들"</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-base">
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg"><b>함정 1: 과잉 사용.</b><br>간단한 스크립트로 해결 가능하다면, 그게 정답이다.</div>
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg"><b>함정 2: 컨텍스트 관리 소홀.</b><br>컨텍스트 오염은 실패의 주요 원인이다. 정제된 단일 컨텍스트가 멀티턴보다 나을 수 있다.</div>
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg"><b>함정 3: 연쇄 오류.</b><br>1단계의 작은 오류가 5단계에서 실패로 증폭된다. 각 단계별 검증이 필수다.</div>
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg"><b>함정 4: 검토 비용 과소평가.</b><br>AI 생성 결과물은 공짜가 아니다. 검증(테스트) 없이는 신뢰할 수 없다.</div>
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg"><b>함정 5: 보안.</b><br>프롬프트 인젝션에 취약하다. 신뢰할 수 없는 데이터를 다룰 땐 최소 권한 원칙을 적용해야 한다.</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 36: Key Takeaways -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Key Takeaways</h2>
-                    <p class="slide-subtitle">핵심 요약</p>
-                    <div class="slide-content space-y-6">
-                        <div class="flex items-start">
-                            <div class="text-3xl mr-5 font-black">1.</div>
-                            <div><b class="text-xl">Engineering > Prompting</b><br>성공은 프롬프트가 아닌 엔지니어링 규율에서 나옵니다. 명확한 아키텍처, 상태 관리, 테스트가 핵심입니다.</div>
-                        </div>
-                        <div class="flex items-start">
-                            <div class="text-3xl mr-5 font-black">2.</div>
-                            <div><b class="text-xl">Feedback is Fuel</b><br>성능 향상은 명확하고 구조화된 피드백(<span class="highlight">특히 테스트 결과와 사용자 피드백</span>)을 체계적으로 주입하는 능력에 달려 있습니다.</div>
-                        </div>
-                         <div class="flex items-start">
-                            <div class="text-3xl mr-5 font-black">3.</div>
-                            <div><b class="text-xl">Control the Context</b><br>컨텍스트는 에이전트의 '코드'입니다. 컨텍스트 오염을 막고, 필요한 정보만 정제하여 제공하는 것이 중요합니다.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 37: Final Conclusion -->
-            <div class="slide">
-                <div class="slide-container">
-                    <h2 class="slide-title">Final Conclusion</h2>
-                    <div class="slide-content max-w-4xl mx-auto text-center">
-                        <p class="mb-4 text-xl">'5점'에서 '100점'으로의 도약은 AI 능력의 마법이 아니라, <span class="highlight">엔지니어링 성숙도의 여정</span>입니다.</p>
-                        <p class="mb-4 text-xl">성공적인 AI 에이전트 도입은 Sionic AI와 같은 <span class="highlight">신뢰할 수 있는 플랫폼</span> 위에서, 소프트웨어 엔지니어링 원칙, 즉 <b>명확한 아키텍처, 견고한 테스트, 세심한 컨텍스트 관리, 그리고 신뢰할 수 있는 시스템 구축</b>에 대한 집중에서 찾을 수 있습니다.</p>
-                        <p class="mt-8 font-bold text-2xl text-gray-800">가장 효과적인 에이전트 개발자는 결국 뛰어난 시스템 엔지니어일 것입니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 38: Q&A -->
-            <div class="slide">
-                <div class="slide-container text-center">
-                    <div class="text-7xl mb-8">👏</div>
-                    <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4">감사합니다</h1>
-                    <p class="text-xl md:text-2xl text-gray-600">Q&A</p>
-                    <p class="mt-8 text-lg">Sionic AI</p>
-                </div>
-            </div>
-
         </div>
-    </div>
 
-    <!-- Navigation -->
-    <div class="progress-bar-container">
-        <div class="progress-bar">
-            <div id="progress" class="progress"></div>
-        </div>
-        <div class="flex justify-between items-center w-full max-w-6xl mx-auto">
-            <button id="prevBtn" class="btn btn-secondary"><i class="fa-solid fa-arrow-left mr-2"></i> 이전</button>
-            <span id="slideCounter" class="text-gray-600 font-medium"></span>
-            <button id="nextBtn" class="btn btn-primary">다음 <i class="fa-solid fa-arrow-right ml-2"></i></button>
+        <!-- 분석 과정 -->
+        <div id="analysis-process" class="space-y-6">
+            <!-- 1단계: 질문 분해 -->
+            <section id="step1" class="step-card bg-white p-6 rounded-xl shadow-md">
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-100 text-blue-700 rounded-full h-10 w-10 flex items-center justify-center font-bold text-lg mr-4">1</div>
+                    <h3 class="text-2xl font-bold">질문 분해 (Question Expansion)</h3>
+                </div>
+                <p class="text-gray-600 mb-4">AI가 사용자의 복합적인 질문을 구체적이고 검증 가능한 하위 질문들로 분해하여 심층 분석을 준비합니다.</p>
+                <div id="step1-content" class="hidden">
+                    <ul class="list-disc list-inside space-y-2 bg-gray-50 p-4 rounded-lg">
+                        <!-- 하위 질문 목록은 JS에서 동적으로 추가됩니다 -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 2단계: 재귀적 심층 분석 -->
+            <section id="step2" class="step-card bg-white p-6 rounded-xl shadow-md">
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-100 text-blue-700 rounded-full h-10 w-10 flex items-center justify-center font-bold text-lg mr-4">2</div>
+                    <h3 class="text-2xl font-bold">재귀적 심층 분석 (Recursive Analysis)</h3>
+                </div>
+                <p class="text-gray-600 mb-4">분해된 각 질문에 대해 순차적으로 문서 검색 및 답변 생성을 반복합니다.</p>
+                <div id="sub-steps-container" class="space-y-4 mt-4">
+                    <!-- 하위 분석 단계 카드가 여기에 동적으로 추가됩니다 -->
+                </div>
+            </section>
+            
+            <!-- 변수 상태 시각화 -->
+            <section id="variable-tracker" class="step-card bg-white p-6 rounded-xl shadow-md">
+                <div class="flex items-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600 h-8 w-8 mr-3"><path d="M12 20.534v-1.55a2.5 2.5 0 0 1 2.5-2.5h1.55a2.5 2.5 0 0 1 2.5 2.5v1.55a2.5 2.5 0 0 1-2.5 2.5h-1.55a2.5 2.5 0 0 1-2.5-2.5zM12 3.466v1.55a2.5 2.5 0 0 0 2.5 2.5h1.55a2.5 2.5 0 0 0 2.5-2.5V3.466a2.5 2.5 0 0 0-2.5-2.5h-1.55a2.5 2.5 0 0 0-2.5 2.5z"/><path d="M3.466 12h1.55a2.5 2.5 0 0 1 2.5 2.5v1.55a2.5 2.5 0 0 1-2.5 2.5H3.466a2.5 2.5 0 0 1-2.5-2.5v-1.55a2.5 2.5 0 0 1 2.5-2.5z"/><path d="m12 12 4.243-4.243M8.465 8.465 4.222 4.222"/></svg>
+                    <h3 class="text-2xl font-bold">변수 저장 및 업데이트 추적</h3>
+                </div>
+                <p class="text-gray-600 mb-4">최종 보고서 생성을 위해 답변이 `finalReportContent` 변수에 누적되는 과정을 보여줍니다.</p>
+                <div id="variable-content" class="bg-gray-900 text-white p-4 rounded-lg font-mono text-sm code-block">
+                    let finalReportContent = "";
+                </div>
+            </section>
+
+            <!-- 3단계: 최종 보고서 생성 -->
+            <section id="step3" class="step-card bg-white p-6 rounded-xl shadow-md">
+                <div class="flex items-center mb-4">
+                    <div class="bg-green-100 text-green-700 rounded-full h-10 w-10 flex items-center justify-center font-bold text-lg mr-4">3</div>
+                    <h3 class="text-2xl font-bold">최종 보고서 생성 (Final Report)</h3>
+                </div>
+                <p class="text-gray-600 mb-4">누적된 모든 답변(`finalReportContent`)을 종합하여 최종 보고서를 완성합니다.</p>
+                <div id="step3-content" class="hidden prose max-w-none prose-blue">
+                    <!-- 최종 보고서 내용이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </section>
         </div>
     </div>
 
     <script>
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
-        const slideCounter = document.getElementById('slideCounter');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const progressBar = document.getElementById('progress');
+        const startButton = document.getElementById('startButton');
+        const step1 = document.getElementById('step1');
+        const step1Content = document.getElementById('step1-content').querySelector('ul');
+        const step2 = document.getElementById('step2');
+        const subStepsContainer = document.getElementById('sub-steps-container');
+        const variableTracker = document.getElementById('variable-tracker');
+        const variableContent = document.getElementById('variable-content');
+        const step3 = document.getElementById('step3');
+        const step3Content = document.getElementById('step3-content');
 
-        function updateSlide() {
-            slides.forEach((slide, index) => {
-                if (index === currentSlide) {
-                    slide.classList.add('active');
-                } else {
-                    slide.classList.remove('active');
-                }
+        // 분석할 하위 질문과 답변 데이터
+        const researchPlan = [
+            {
+                question: "이 펀드의 핵심 투자 목적과 주요 투자 전략은 무엇인가?",
+                answer: "<strong>답변:</strong> 국공채 등 안정성이 높은 단기금융상품에 투자하여 현금 유동성을 관리하고 안정적인 수익을 추구합니다. (위험등급 6등급)"
+            },
+            {
+                question: "원금 손실 가능성을 포함한 주요 투자 위험 요소는 무엇인가?",
+                answer: "<strong>답변:</strong> 실적배당상품으로 원금 손실이 가능하며, 예금자보호법 적용을 받지 않습니다. 신용등급 하락 및 시장금리 변동 위험이 있습니다."
+            },
+            {
+                question: "클래스(C, C-e 등)에 따른 총 보수 및 수수료는 어떻게 다른가?",
+                answer: "<strong>답변:</strong> 선취/후취/환매 수수료는 없습니다. 총보수는 C클래스(오프라인) 연 0.5%, C-e클래스(온라인) 연 0.31%입니다."
+            },
+            {
+                question: "펀드의 매수 및 환매 절차는 어떻게 되는가?",
+                answer: "<strong>답변:</strong> 오후 5시 이전 신청 시, 2영업일 후(D+2) 기준가격이 적용되며, 환매대금도 2영업일 후에 지급됩니다."
+            },
+            {
+                question: "과거 운용 실적(최근 1년, 3년 수익률 등)은 어떠한가?",
+                answer: "<strong>답변:</strong> C클래스 기준 최근 1년 수익률은 2.76%, 최근 3년 연평균 수익률은 2.91%입니다. (2025-07-18 기준)"
+            }
+        ];
+
+        let finalReportContent = "";
+
+        // 비동기 지연 함수
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        // 분석 시작 함수
+        startButton.addEventListener('click', async () => {
+            startButton.disabled = true;
+            startButton.textContent = '분석 진행 중...';
+            startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            startButton.classList.remove('hover:bg-blue-700');
+
+            // 1단계: 질문 분해 보여주기
+            step1.classList.add('visible');
+            researchPlan.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.question;
+                step1Content.appendChild(li);
             });
-            slideCounter.textContent = `Slide ${currentSlide + 1} / ${slides.length}`;
-            progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            step1Content.parentElement.style.display = 'block';
+            await delay(1000);
+
+            // 2단계: 재귀적 분석 시작
+            step2.classList.add('visible');
+            await delay(500);
             
-            prevBtn.disabled = currentSlide === 0;
-            nextBtn.disabled = currentSlide === slides.length - 1;
+            // 변수 추적기 보여주기
+            variableTracker.classList.add('visible');
+            await delay(500);
 
-            prevBtn.classList.toggle('opacity-50', currentSlide === 0);
-            prevBtn.classList.toggle('cursor-not-allowed', currentSlide === 0);
-            nextBtn.classList.toggle('opacity-50', currentSlide === slides.length - 1);
-            nextBtn.classList.toggle('cursor-not-allowed', currentSlide === slides.length - 1);
-        }
+            // 각 하위 질문에 대한 분석을 순차적으로 수행
+            for (let i = 0; i < researchPlan.length; i++) {
+                const item = researchPlan[i];
+                
+                // 하위 단계 카드 생성
+                const subStepCard = document.createElement('div');
+                subStepCard.className = 'sub-step-card bg-gray-50 p-4 rounded-lg border';
+                subStepCard.innerHTML = `
+                    <p class="font-semibold text-blue-800">질문 ${i + 1}: ${item.question}</p>
+                    <div class="flex items-center mt-2" id="status-${i}">
+                        <div class="loader mr-2"></div>
+                        <p class="text-gray-500">문서에서 정보 검색 및 답변 생성 중...</p>
+                    </div>
+                `;
+                subStepsContainer.appendChild(subStepCard);
+                await delay(10); // DOM 렌더링 시간
+                subStepCard.classList.add('visible');
 
-        nextBtn.addEventListener('click', () => {
-            if (currentSlide < slides.length - 1) {
-                currentSlide++;
-                updateSlide();
+                await delay(1500); // 검색 및 분석 시뮬레이션
+
+                // 상태 업데이트 및 답변 표시
+                const statusDiv = document.getElementById(`status-${i}`);
+                statusDiv.innerHTML = `<p class="text-green-600 font-semibold">✅ 답변 생성 완료</p>`;
+                const answerP = document.createElement('p');
+                answerP.className = 'mt-2 text-gray-800';
+                answerP.innerHTML = item.answer;
+                subStepCard.appendChild(answerP);
+                
+                // 변수 업데이트 및 시각화
+                const answerForReport = `\n\n### ${item.question}\n${item.answer.replace(/<strong>.*?<\/strong>/g, '')}`;
+                finalReportContent += answerForReport;
+                variableContent.textContent = `let finalReportContent = "${finalReportContent.replace(/"/g, '\\"')}";`;
+                
+                await delay(1000);
             }
+            
+            // 3단계: 최종 보고서 생성
+            step3.classList.add('visible');
+            step3Content.innerHTML = `
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h4 class="text-xl font-bold mb-4">미래에셋 개인전용 MMF 1호(국공채) 투자 핵심 요약</h4>
+                    <article class="space-y-4">
+                        <div>
+                            <h5 class="font-semibold">📊 펀드 개요 및 전략</h5>
+                            <p>국공채 등 유동성이 높고 위험이 낮은 단기금융상품에 주로 투자하여 안정적인 수익을 추구하는 현금 관리 수단입니다. 투자 위험 등급은 <strong>6등급(매우 낮은 위험)</strong>으로, 안정성을 중시하는 투자자에게 적합합니다.</p>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold">⚠️ 주요 투자 위험</h5>
+                            <p>이 펀드는 실적배당상품으로 <strong>원금 손실이 발생할 수 있습니다.</strong> 또한, <strong>예금자보호법의 보호를 받지 않습니다.</strong> 채권의 신용등급이 하락하거나, 펀드 평가 방식(장부가/시가)의 차이가 발생할 경우 기준가격이 변동될 위험이 있습니다.</p>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold">💰 수수료 및 비용 (C클래스 기준)</h5>
+                            <ul>
+                                <li><strong>수수료미징구-오프라인(C):</strong> 총보수 연 0.5%</li>
+                                <li><strong>수수료미징구-온라인(C-e):</strong> 총보수 연 0.31%</li>
+                            </ul>
+                            <p class="text-sm text-gray-600">* 별도의 선취/후취 판매수수료나 환매수수료는 없습니다.</p>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold">🔄 매수 및 환매 절차</h5>
+                            <ul>
+                                <li><strong>매수/환매 신청:</strong> 오후 5시 이전 신청 시, <strong>2영업일 후(D+2)</strong> 기준가격이 적용됩니다.</li>
+                                <li><strong>환매대금 지급:</strong> 오후 5시 이전 신청 시, <strong>2영업일 후(D+2)</strong>에 지급됩니다.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold">📈 과거 운용 실적 (세전, C클래스 기준)</h5>
+                            <p>최근 1년 수익률은 <strong>2.76%</strong>, 최근 3년 연평균 수익률은 <strong>2.91%</strong> 수준입니다. (작성 기준일: 2025-07-18)</p>
+                        </div>
+                    </article>
+                    <div class="mt-6 border-t pt-4 border-blue-200">
+                        <h5 class="font-bold text-red-600">⭐ 초보 투자자를 위한 핵심 유의사항</h5>
+                        <p class="mt-2">이 상품은 은행 예금과 달리 <strong>원금이 보장되지 않는 투자 상품</strong>이라는 점을 명확히 인지해야 합니다. '매우 낮은 위험' 등급이지만, 시장 상황에 따라 손실이 발생할 수 있습니다. 또한, 환매 시 현금화에 2영업일이 소요되므로 유동성 계획을 세울 때 이를 고려해야 합니다.</p>
+                    </div>
+                </div>
+            `;
+            step3Content.style.display = 'block';
+
+            startButton.textContent = '분석 완료';
+            startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            startButton.classList.add('bg-green-600');
         });
-
-        prevBtn.addEventListener('click', () => {
-            if (currentSlide > 0) {
-                currentSlide--;
-                updateSlide();
-            }
-        });
-
-        function toggleVisibility(id) {
-            const element = document.getElementById(id);
-            if (element.style.display === 'none' || element.style.display === '') {
-                element.style.display = 'block';
-            } else {
-                element.style.display = 'none';
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight') {
-                nextBtn.click();
-            } else if (e.key === 'ArrowLeft') {
-                prevBtn.click();
-            }
-        });
-
-        // Initial setup
-        updateSlide();
     </script>
 
 </body>
